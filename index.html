@@ -76,15 +76,20 @@ pre{white-space: pre-wrap;word-wrap: break-word;overflow-wrap: break-word;font-s
 
 <input id="contact" placeholder="no hp/username/id">
 
-<div class="box">
+<!-- ===== RINGKASAN ORDER (HIDDEN AWAL) ===== -->
+<div class="box" id="summaryBox" style="display:none">
   <h2>Ringkasan Order</h2>
   <pre id="summary"></pre>
   <div class="price" id="price">Rp 0</div>
 </div>
 
-<div class="box">
+<!-- ===== PEMBAYARAN (HIDDEN AWAL) ===== -->
+<div class="box" id="paymentBox" style="display:none">
   <h2>Pembayaran</h2>
-  <p style="font-size:13px;color:#aaa">Scan QRIS di bawah ini sesuai total pembayaran.</p>
+  <p style="font-size:13px;color:#aaa">
+    Scan QRIS di bawah ini dan bayar <b>SESUIAI NOMINAL</b>.
+    3 digit terakhir adalah kode verifikasi pembayaran.
+  </p>
   <img src="qris.png" style="width:100%;border-radius:12px;margin:12px 0">
   <label style="font-size:13px">
     <input type="checkbox" id="paid"> Saya sudah bayar
@@ -102,24 +107,33 @@ const data = {
     "Skincare": [
       {name:"MenYou", desc:"1 paket basic skincare,(facewash,serum,sunscreen)"},
       {name:"Cogan facewash", desc:"1 paket (facewash isi 2 produk)"},
-		{name:"Clorismen", desc:"1 paket basic skincare isi 4 produk)"},
-      {name:"Hauff", desc:"1 paket basic skincare (facewash,serum,sunscreen)"}
+      {name:"Clorismen", desc:"1 paket basic skincare isi 4 produk)"},
+      {name:"Hauff", desc:"1 paket basic skincare (facewash,serum,sunscreen)"},
+      {name:"Barmen", desc:"1 paket basic skincare (facewash,serum,sunscreen)"},
+      {name:"clorismen standart", desc:"1 paket basic skincare (facewash,serum)"},
+      {name:"sombong basic", desc:"1 paket basic skincare (facewash,easy spray)"},
+      {name:"msglow for men", desc:"1 face wash"},
+      {name:"kahf", desc:"1 face wash"},
+      {name:"Garnier men", desc:"1 facewash"},
+      {name:"urban x", desc:"1 facewash"}
+    ],
+    "parfum": [
+      {name:"Vice city (gamalmen)", desc:"1 produk parfum vice city"}
+    ],
+    "jam tangan": [
+      {name:"Aolon curve", desc:"1 produk smartwatch merek aolon "}
     ]
   },
   shoots: [
     {name:"Video goyang-goyang(mute🔇)", price:1000},
     {name:"Video goyang-goyang(hard selling/bicara🗣️)", price:2000},
     {name:"Video goyang-goyang (AI mute🔇)", price:1000},
-	 {name:"Video goyang-goyang(Ai/bicara🗣️)", price:2000},
-	 {name:"Video promosi figur(AI🗣️)", price:10000},
-    {name:"Video promosi figur(Model💁🏻‍♀️Manusia)", price:20000}
+    {name:"Video goyang-goyang(Ai/bicara🗣️)", price:2000}
   ],
   backgrounds: [
-    {name:"Gambar 1", img:"background1.jpg"},
-    {name:"Gambar 2", img:"background2.jpg"},
-    {name:"Gambar 3", img:"background3.jpg"},
-	 {name:"Gambar 3", img:"background4.jpg"},
-    {name:"Custom (sesuai request)", img:""}
+    {name:"Mading", img:"background1.jpg"},
+    {name:"walpaper", img:"background2.jpg"},
+    {name:"Custom (sesuai request ini hanya contoh)", img:""}
   ],
   durations: [
     {name:"15 Detik", value:1},
@@ -145,6 +159,10 @@ const paidEl = document.getElementById("paid");
 const summaryEl = document.getElementById("summary");
 const priceEl = document.getElementById("price");
 const btn = document.getElementById("sendTelegram");
+const summaryBox = document.getElementById("summaryBox");
+const paymentBox = document.getElementById("paymentBox");
+// ==== KODE UNIK (GLOBAL, STABIL) ====
+let kodeUnik = Math.floor(Math.random() * 900) + 100;
 
 // ==== UTILITY ====
 function renderSelect(el, items, prop="name"){
@@ -153,7 +171,7 @@ function renderSelect(el, items, prop="name"){
     const o = document.createElement("option");
     if(typeof item==="object"){
       o.text = item[prop];
-      o.value = item[prop]; // gunakan nama untuk value agar niche mapping benar
+      o.value = item[prop];
     }else{
       o.text = item;
       o.value = item;
@@ -174,7 +192,7 @@ renderSelect(deliveryEl, data.deliveries);
 
 // ==== LOAD PRODUK ====
 function loadProducts(){
-  const products = data.niches[nicheEl.value]; // value = "Skincare"
+  const products = data.niches[nicheEl.value];
   renderSelect(productEl, products,"name");
   productDesc.innerText = products[0].desc;
   updateSummary();
@@ -182,31 +200,42 @@ function loadProducts(){
 
 // ==== UPDATE SUMMARY ====
 function updateSummary(){
+  const selectedBg = data.backgrounds[bgEl.selectedIndex];
+const isComplete =
+    nicheEl.value &&
+    productEl.value &&
+    shootEl.value &&
+    bgEl.value &&
+    durationEl.value &&
+    qtyEl.value &&
+    deliveryEl.value &&
+    contactEl.value.trim();
+
+  if(!isComplete){
+    summaryBox.style.display = "none";
+    paymentBox.style.display = "none";
+    btn.classList.remove("active");
+    btn.removeAttribute("href");
+    return;
+  }
+
+  summaryBox.style.display = "block";
+  paymentBox.style.display = "block";
+
   const selectedNiche = nicheEl.value;
   const products = data.niches[selectedNiche];
-  const productIndex = productEl.selectedIndex;
-  const shootIndex = shootEl.selectedIndex;
-  const bgIndex = bgEl.selectedIndex;
-  const durIndex = durationEl.selectedIndex;
+  const selectedProduct = products[productEl.selectedIndex];
+  const selectedShoot = data.shoots[shootEl.selectedIndex];
+  const selectedDur = data.durations[durationEl.selectedIndex];
   const qty = Number(qtyEl.value);
 
-  const selectedProduct = products[productIndex];
-  const selectedShoot = data.shoots[shootIndex];
-  const selectedBg = data.backgrounds[bgIndex];
-  const selectedDur = data.durations[durIndex];
+  const baseTotal = Math.max(selectedShoot.price * selectedDur.value * qty, 1000);
+  const total = baseTotal + kodeUnik;
 
-  const total = Math.max(selectedShoot.price * selectedDur.value * qty, 1000);
-
-  productDesc.innerText = selectedProduct.desc;
   priceEl.innerText = rupiah(total);
 
-  // Background preview
-  if(selectedBg.img){
-    bgPreview.src = selectedBg.img;
-    bgPreview.style.display = "block";
-  } else bgPreview.style.display = "none";
 
-  const text=`📦 ORDER VIDEOMENTAH.ID
+  const text = `📦 ORDER VIDEOMENTAH.ID
 
 Niche       : ${selectedNiche}
 Type        : ${selectedShoot.name}
@@ -216,33 +245,52 @@ Jumlah      : ${qty} Video
 
 Produk      : ${selectedProduct.name}
 Detail      : ${selectedProduct.desc}
-Harga / Video : ${rupiah(selectedShoot.price * selectedDur.value)}
 
 Pengiriman : ${deliveryEl.value}
 Kontak     : ${contactEl.value}
 
 Total      : ${rupiah(total)}
-Status     : SUDAH BAYAR`;
+Kode Unik  : ${kodeUnik}
+Status     : MENUNGGU PEMBAYARAN
+`;
 
   summaryEl.innerText = text;
 
-  if(contactEl.value.trim() && paidEl.checked){
+  if(paidEl.checked){
     btn.classList.add("active");
-    btn.href="https://t.me/sudanaswatt?text="+encodeURIComponent(text);
+    btn.href = "https://t.me/sudanaswatt?text=" + encodeURIComponent(text);
   }else{
     btn.classList.remove("active");
     btn.removeAttribute("href");
   }
+}function updateBackgroundPreview(){
+  const bg = data.backgrounds[bgEl.selectedIndex];
+  if(bg && bg.img){
+    bgPreview.src = bg.img;
+    bgPreview.style.display = "block";
+  } else {
+    bgPreview.style.display = "none";
+  }
 }
-
 // ==== EVENT LISTENER ====
-[nicheEl, productEl, shootEl, bgEl, durationEl, qtyEl, deliveryEl, contactEl, paidEl].forEach(el=>{
+// background preview JALAN TERPISAH
+bgEl.addEventListener("change", updateBackgroundPreview);
+
+// summary & pembayaran
+[nicheEl, productEl, shootEl, durationEl, qtyEl, deliveryEl, contactEl, paidEl]
+.forEach(el=>{
   el.addEventListener("change", updateSummary);
   el.addEventListener("keyup", updateSummary);
+});productEl.addEventListener("change", () => {
+  const products = data.niches[nicheEl.value];
+  const selectedProduct = products[productEl.selectedIndex];
+  productDesc.innerText = selectedProduct.desc;
+  updateSummary();
 });
 
 // ==== INIT ====
 loadProducts();
+updateBackgroundPreview();
 </script>
 
 </body>
