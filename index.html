@@ -161,7 +161,8 @@ const priceEl = document.getElementById("price");
 const btn = document.getElementById("sendTelegram");
 const summaryBox = document.getElementById("summaryBox");
 const paymentBox = document.getElementById("paymentBox");
-// ==== KODE UNIK (GLOBAL, STABIL) ====
+
+// ==== KODE UNIK ====
 let kodeUnik = Math.floor(Math.random() * 900) + 100;
 
 // ==== UTILITY ====
@@ -190,18 +191,26 @@ renderSelect(durationEl, data.durations,"name");
 renderSelect(qtyEl, data.quantities);
 renderSelect(deliveryEl, data.deliveries);
 
-// ==== LOAD PRODUK ====
+// ==== LOAD PRODUK SESUAI NICHE ====
 function loadProducts(){
-  const products = data.niches[nicheEl.value];
+  const products = data.niches[nicheEl.value] || [{name:"—", desc:"—"}];
   renderSelect(productEl, products,"name");
   productDesc.innerText = products[0].desc;
   updateSummary();
 }
 
+// ==== UPDATE DESKRIPSI PRODUK SAAT PILIH PRODUK ====
+productEl.addEventListener("change", () => {
+  const products = data.niches[nicheEl.value] || [{name:"—", desc:"—"}];
+  const selectedProduct = products[productEl.selectedIndex];
+  productDesc.innerText = selectedProduct.desc;
+  updateSummary();
+});
+
 // ==== UPDATE SUMMARY ====
 function updateSummary(){
   const selectedBg = data.backgrounds[bgEl.selectedIndex];
-const isComplete =
+  const isComplete =
     nicheEl.value &&
     productEl.value &&
     shootEl.value &&
@@ -234,7 +243,6 @@ const isComplete =
 
   priceEl.innerText = rupiah(total);
 
-
   const text = `📦 ORDER VIDEOMENTAH.ID
 
 Niche       : ${selectedNiche}
@@ -263,7 +271,10 @@ Status     : MENUNGGU PEMBAYARAN
     btn.classList.remove("active");
     btn.removeAttribute("href");
   }
-}function updateBackgroundPreview(){
+}
+
+// ==== UPDATE BACKGROUND PREVIEW ====
+function updateBackgroundPreview(){
   const bg = data.backgrounds[bgEl.selectedIndex];
   if(bg && bg.img){
     bgPreview.src = bg.img;
@@ -272,19 +283,20 @@ Status     : MENUNGGU PEMBAYARAN
     bgPreview.style.display = "none";
   }
 }
+
 // ==== EVENT LISTENER ====
-// background preview JALAN TERPISAH
+// background preview
 bgEl.addEventListener("change", updateBackgroundPreview);
 
 // summary & pembayaran
-[nicheEl, productEl, shootEl, durationEl, qtyEl, deliveryEl, contactEl, paidEl]
-.forEach(el=>{
+[nicheEl, durationEl, qtyEl, deliveryEl, shootEl, contactEl, paidEl].forEach(el=>{
   el.addEventListener("change", updateSummary);
   el.addEventListener("keyup", updateSummary);
-});productEl.addEventListener("change", () => {
-  const products = data.niches[nicheEl.value];
-  const selectedProduct = products[productEl.selectedIndex];
-  productDesc.innerText = selectedProduct.desc;
+});
+
+// ganti niche → load produk otomatis
+nicheEl.addEventListener("change", () => {
+  loadProducts();
   updateSummary();
 });
 
